@@ -39,8 +39,9 @@ public class MainMenu {
 
     private void createBoard() throws SQLException {
         var entity = new BoardEntity();
+        sc.nextLine();
         System.out.println("Informe o nome do seu board: ");
-        entity.setName(sc.next());
+        entity.setName(sc.nextLine());
 
         System.out.println("Seu board terá colunas além dos 3 padrões? Se sim, informe quantas, senão digite '0': ");
         var additionalColumns = sc.nextInt();
@@ -48,26 +49,29 @@ public class MainMenu {
         List<BoardColumnEntity> columns = new ArrayList<>();
 
         System.out.println("Informe o nome da coluna inicial do board: ");
-        var initialColumnName = sc.next();
+        sc.nextLine();
+        var initialColumnName = sc.nextLine();
         var initialColumn = createColumn(initialColumnName, INITIAL, 0);
         columns.add(initialColumn);
 
         for (int i = 0; i < additionalColumns; i++) {
             System.out.println("Informe o nome da coluna de tarefa pendente do board: ");
-            var pendingColumnName = sc.next();
+            var pendingColumnName = sc.nextLine();
             var pendingColumn = createColumn(pendingColumnName, PENDING, i + 1);
             columns.add(pendingColumn);
         }
 
         System.out.println("Informe o nome da coluna final: ");
-        var finalColumnName = sc.next();
+        var finalColumnName = sc.nextLine();
         var finalColumn = createColumn(finalColumnName, FINAL, additionalColumns + 1);
         columns.add(finalColumn);
 
         System.out.println("Informe o nome da coluna de cancelamento do baord: ");
-        var cancelColumnName = sc.next();
-        var cancelColumn = createColumn(cancelColumnName, CANCEL, additionalColumns + 1);
+        var cancelColumnName = sc.nextLine();
+        var cancelColumn = createColumn(cancelColumnName, CANCEL, additionalColumns + 2);
         columns.add(cancelColumn);
+
+        System.out.println(entity);
 
         entity.setBoardColumns(columns);
         try(var connection = getConnection()){

@@ -1,6 +1,7 @@
 package com.dio.gustavo;
 
 import com.dio.gustavo.persistence.migration.MigrationStrategy;
+import com.dio.gustavo.ui.MainMenu;
 
 import java.sql.SQLException;
 
@@ -12,6 +13,7 @@ public class Main {
         try(var connection = getConnection()){
             new MigrationStrategy(connection).executeMigration();
         }
+        new MainMenu().execute();
     }
 
 }
