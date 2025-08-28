@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.Optional;
 
 import static com.dio.gustavo.persistence.converter.OffsetDateTimeConverter.toOffsetDateTime;
+import static java.util.Objects.nonNull;
 
 @AllArgsConstructor
 public class CardDAO {
@@ -51,16 +52,16 @@ public class CardDAO {
                        b.block_reason,
                        c.board_column_id,
                        bc.name,
-                       COUNT(SELECT sub_b.id
-                               FROM BLOCKS sub_b
-                              WHERE sub_b.card_id = c.id) blocks_amount
+                       (SELECT COUNT(sub_b.id)
+                         FROM BLOCKS sub_b
+                         WHERE sub_b.card_id = c.id) blocks_amount
                   FROM CARDS c
                   LEFT JOIN BLOCKS b
                     ON c.id = b.card_id
                         AND b.unblocked_at IS NULL
-                  INNER BOARDS_COLUMNS bc
+                  INNER JOIN BOARDS_COLUMNS bc
                     ON bc.id = c.board_column_id
-                  WHERE id = ?;
+                  WHERE c.id = ?;
                 """;
         try(var statement = connection.prepareStatement(sql)){
             statement.setLong(1, id);
@@ -71,7 +72,7 @@ public class CardDAO {
                         resultSet.getLong("c.id"),
                         resultSet.getString("c.title"),
                         resultSet.getString("c.description"),
-                        resultSet.getString("b.block_reason").isEmpty(),
+                        nonNull(resultSet.getString("b.block_reason")),
                         toOffsetDateTime(resultSet.getTimestamp("b.blocked_at")),
                         resultSet.getString("b.block_reason"),
                         resultSet.getInt("blocks_amount"),
