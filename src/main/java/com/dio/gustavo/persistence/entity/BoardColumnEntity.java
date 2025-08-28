@@ -1,6 +1,11 @@
 package com.dio.gustavo.persistence.entity;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class BoardColumnEntity {
@@ -10,6 +15,10 @@ public class BoardColumnEntity {
     private int order;
     private BoardColumnKindEnum kind;
     private BoardEntity board = new BoardEntity();
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<CardEntity> cards = new ArrayList<>();
+
 
     public Long getId() {
         return id;
@@ -49,5 +58,13 @@ public class BoardColumnEntity {
 
     public void setBoard(BoardEntity board) {
         this.board = board;
+    }
+
+    public List<CardEntity> getCards() {
+        return cards;
+    }
+
+    public void setCards(List<CardEntity> cards) {
+        this.cards = cards;
     }
 }
