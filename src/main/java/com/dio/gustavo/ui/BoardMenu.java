@@ -1,15 +1,20 @@
 package com.dio.gustavo.ui;
 
+import com.dio.gustavo.dto.BoardColumnInfoDTO;
 import com.dio.gustavo.persistence.entity.BoardColumnEntity;
 import com.dio.gustavo.persistence.entity.BoardEntity;
+import com.dio.gustavo.persistence.entity.CardEntity;
 import com.dio.gustavo.service.BoardColumnQueryService;
 import com.dio.gustavo.service.BoardQueryService;
+import com.dio.gustavo.service.CardQueryService;
+import com.dio.gustavo.service.CardService;
 import lombok.AllArgsConstructor;
 
 import java.sql.SQLException;
 import java.util.Scanner;
 
 import static com.dio.gustavo.persistence.config.ConnectionConfig.getConnection;
+import static com.dio.gustavo.persistence.entity.BoardColumnKindEnum.INITIAL;
 
 @AllArgsConstructor
 public class BoardMenu {
@@ -20,7 +25,7 @@ public class BoardMenu {
 
     public void execute() {
         try {
-            System.out.printf("Bem vindo ao board %s, selecione a operação desejada", entity.getId());
+            System.out.printf("Bem vindo ao board %s, selecione a operação desejada:\n", entity.getId());
             var option = -1;
             while (option != 9) {
                 System.out.println("1 - Criar um card");
@@ -54,22 +59,51 @@ public class BoardMenu {
         }
     }
 
-    private void createCard() {
+    private void createCard() throws SQLException {
+        var card = new CardEntity();
+        System.out.println("Informe o título do card: ");
+        card.setTitle(sc.nextLine());
+        System.out.println("Informe a descrição do card: ");
+        card.setDescription(sc.nextLine());
+        card.setBoardColumn(entity.getInitialColumn());
+        try(var connection = getConnection()){
+            new CardService(connection).create(card);
+        }
     }
 
-    private void moveCardToNextColumn() {
+    private void moveCardToNextColumn() throws SQLException {
+        System.out.println("Informe o id do card que deseja mover para a próxima coluna");
+        var cardId = sc.nextLong();
+        var boardColumnsInfo = entity.getBoardColumns().stream()
+                .map(bc -> new BoardColumnInfoDTO(bc.getId(), bc.getOrder(), bc.getKind()))
+                .toList();
+        try(var connection = getConnection()){
+            new CardService(connection).moveToNextColumn(cardId, boardColumnsInfo);
+        } catch (RuntimeException ex){
+            System.out.println(ex.getMessage());
+        }
     }
-
     private void blockCard() {
     }
 
     private void unblockCard() {
     }
 
-    private void cancelCard() {
+    private void cancelCard() throws SQLException {
+        System.out.println("Informe o id do card que deseja mover para a coluna de cancelamento");
+        var cardId = sc.nextLong();
+        var cancelColumn = entity.getCancelColumn();
+        var boardColumnsInfo = entity.getBoardColumns().stream()
+                .map(bc -> new BoardColumnInfoDTO(bc.getId(), bc.getOrder(), bc.getKind()))
+                .toList();
+        try(var connection = getConnection()){
+            new CardService(connection).cancel(cardId, cancelColumn.getId(), boardColumnsInfo);
+        } catch (RuntimeException ex){
+            System.out.println(ex.getMessage());
+        }
     }
 
-    private void showBoard() throws SQLException{
+    private void showBoard() throws SQLException {
         try(var connection = getConnection()){
             var optional = new BoardQueryService(connection).showBoardDetails(entity.getId());
             optional.ifPresent(b -> {
@@ -83,23 +117,39 @@ public class BoardMenu {
 
     private void showColumn() throws SQLException {
         var columnsIds = entity.getBoardColumns().stream().map(BoardColumnEntity::getId).toList();
-        var selectedColumn = -1L;
-        while (!columnsIds.contains(selectedColumn)){
-            System.out.printf("Escolha uma coluna do board %s: \n", entity.getName());
+        var selectedColumnId = -1L;
+        while (!columnsIds.contains(selectedColumnId)){
+            System.out.printf("Escolha uma coluna do board %s pelo id\n", entity.getName());
             entity.getBoardColumns().forEach(c -> System.out.printf("%s - %s [%s]\n", c.getId(), c.getName(), c.getKind()));
-            selectedColumn = sc.nextLong();
+            selectedColumnId = sc.nextLong();
         }
         try(var connection = getConnection()){
-            var column = new BoardColumnQueryService(connection).findById(selectedColumn);
+            var column = new BoardColumnQueryService(connection).findById(selectedColumnId);
             column.ifPresent(co -> {
-                System.out.printf("Coluna %s tipo %s: \n", co.getName(), co.getKind());
+                System.out.printf("Coluna %s tipo %s\n", co.getName(), co.getKind());
                 co.getCards().forEach(ca -> System.out.printf("Card %s - %s\nDescrição: %s",
                         ca.getId(), ca.getTitle(), ca.getDescription()));
             });
         }
     }
 
-    private void showCard() {
-    }
+    private void showCard() throws SQLException {
+        System.out.println("Informe o id do card que deseja visualizar: ");
+        var selectedCardId = sc.nextLong();
+        try(var connection  = getConnection()){
+            new CardQueryService(connection).findById(selectedCardId)
+                    .ifPresentOrElse(
+                            c -> {
+                                System.out.printf("Card %s - %s.\n", c.id(), c.title());
+                                System.out.printf("Descrição: %s\n", c.description());
+                                System.out.println(c.blocked() ?
+                                        "Está bloqueado. Motivo: " + c.blockReason() :
+                                        "Não está bloqueado");
+                                System.out.printf("Já foi bloqueado %s vezes\n", c.blocksAmount());
+                                System.out.printf("Está no momento na coluna %s - %s\n", c.columnId(), c.columnName());
+                            },
+                            () -> System.out.printf("Não existe um card com o id %s\n", selectedCardId));
+        }
 
+    }
 }
